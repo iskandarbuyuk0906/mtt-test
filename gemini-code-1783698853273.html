@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Didaktika fanidan Murakkab Testlar Platformasi</title>
+    <style>
+        /* Zamonaviy dizayn tizimi */
+        :root {
+            --text-muted: #8a8a93;
+            --accent-blue: #2563eb;
+            --success-70: rgba(34, 197, 94, 0.7); /* 70% Yashil */
+            --danger-70: rgba(239, 68, 68, 0.7);   /* 70% Qizil */
+            --selected-blue: #e0f2fe;
+            --selected-border: #3b82f6;
+        }
+
+        body, html { 
+            margin: 0; 
+            height: 100%; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .app-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+
+        #test-pane {
+            background: #ffffff;
+            width: 100%;
+            max-width: 850px;
+            min-height: 550px;
+            padding: 3rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        .progress-bar {
+            font-weight: 600;
+            color: var(--accent-blue);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        #question {
+            font-size: 1.45rem;
+            color: #0f172a;
+            margin-bottom: 2rem;
+            line-height: 1.45;
+        }
+
+        #options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            margin-bottom: 2.5rem;
+        }
+
+        /* Variant kartalari */
+        .option-card {
+            padding: 1.25rem 1.5rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            color: #334155;
+            transition: all 0.2s ease;
+            background: #f8fafc;
+            line-height: 1.4;
+            font-size: 1.05rem;
+        }
+
+        .option-card:hover:not(.locked) {
+            border-color: #cbd5e1;
+            background-color: #f1f5f9;
+        }
+
+        /* Tanlangan, ammo hali tasdiqlanmagan holat */
+        .option-card.selected {
+            background-color: var(--selected-blue) !important;
+            border-color: var(--selected-border) !important;
+            color: #0369a1 !important;
+        }
+
+        /* Tasdiqlangan ranglar (70% opacity) */
+        .option-card.correct {
+            background-color: var(--success-70) !important;
+            border-color: #22c55e !important;
+            color: white !important;
+        }
+
+        .option-card.wrong {
+            background-color: var(--danger-70) !important;
+            border-color: #ef4444 !important;
+            color: white !important;
+        }
+
+        .option-card.locked {
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        /* Navigatsiya tugmalari */
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            margin-top: auto;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.9rem 2.2rem;
+            font-weight: 600;
+            font-size: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #475569;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #cbd5e1;
+        }
+
+        .btn:disabled {
+            background: #cbd5e1;
+            color: #94a3b8;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div id="test-pane">
+        <div class="progress-bar">
+            <span id="progress-text"></span>
+        </div>
+        
+        <h2 id="question"></h2>
+        
+        <div id="options-container"></div>
+
+        <div class="button-group">
+            <button id="prev-btn" class="btn btn-secondary">Oldingi savol</button>
+            <button id="action-btn" class="btn btn-primary" disabled>Tasdiqlash</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Barcha 35 ta savoldan iborat mukammal ma'lumotlar bazasi
+    const testData = [
+        // --- 1-QISM: DIDAKTIKANING ASOSIY KATEGORIYALARI (15 TA SAVOL) ---
+        {
+            question: "1. Didaktika pedagogik fan sohasi sifatida nima orqali ifodalanadi?",
+            options: [
+                "A) Tarbiyaviy faoliyatning shakl va vositalari orqali",
+                "B) O‘qitish mohiyatini yorituvchi kategoriya va tushunchalar orqali",
+                "C) Bilimlarni tekshirish usullari va mezonlari orqali",
+                "D) Shaxs rivojlanishining bosqich va qonunlari orqali"
+            ],
+            correct: "B"
+        },
+        {
+            question: "2. Qaysi qatorda maktabgacha pedagogikaning asosiy kategoriyalari to‘g‘ri berilgan?",
+            options: [
+                "A) Ta’lim, bilim, ko‘nikma, malaka, ma’lumot, tarbiya, rivojlanish, shakllanish",
+                "B) Ta’lim, kuzatish, o‘lchash, tajriba, rivojlanish, faoliyat, shakllanish",
+                "C) Bilim, tafakkur, nazariya, tajriba, tarbiya, ma’lumot, rivojlanish",
+                "D) O‘qitish, nazorat, faoliyat, ko‘nikma, tajriba, tarbiya, shakllanish"
+            ],
+            correct: "A"
+        },
+        {
+            question: "3. “Kategoriya” tushunchasining materialdagi ta’rifi qaysi javobda to‘g‘ri ifodalangan?",
+            options: [
+                "A) Ta’lim mazmunini yorituvchi pedagogik faoliyat",
+                "B) Bilimlarni muayyan guruhlarga ajratuvchi tushuncha",
+                "C) Fanning mohiyatini ifodalovchi eng muhim asosiy tushuncha",
+                "D) O‘qitish jarayonini nazorat qiluvchi nazariy qoida"
+            ],
+            correct: "C"
+        },
+        {
+            question: "4. Ta’limning mohiyati qaysi javobda to‘liqroq ochib berilgan?",
+            options: [
+                "A) Tarbiyalanuvchilarning bilimlarni mustaqil egallash faoliyati",
+                "B) Bolaning aqliy faoliyatini nazorat qilish jarayoni",
+                "C) Bilimlarni amalda sinash va tizimlashtirish vositasi",
+                "D) Mutaxassislar yordamida bilim, ko‘nikma va malaka shakllantirish jarayoni"
+            ],
+            correct: "D"
+        },
+        {
+            question: "5. Ta’lim bolaning shaxs sifatida shakllanishida qanday vosita hisoblanadi?",
+            options: [
+                "A) Uni hayot va mehnatga ongli tayyorlash vositasi",
+                "B) Uni ilmiy tadqiqotlarga yo‘naltirish vositasi",
+                "C) Uni atrof-muhitga moslashtirish vositasi",
+                "D) Uni tajriba o‘tkazishga tayyorlash vositasi"
+            ],
+            correct: "A"
+        },
+        {
+            question: "6. Materialga ko‘ra, ta’limning asosiy vazifasi nimadan iborat?",
+            options: [
+                "A) Ta’lim oluvchining faoliyatini nazorat qilishdan",
+                "B) Ta’lim oluvchini o‘qitishdan",
+                "C) Ta’lim oluvchiga ma’lumot to‘plashdan",
+                "D) Ta’lim oluvchini ishlab chiqarishga jalb etishdan"
+            ],
+            correct: "B"
+        },
+        {
+            question: "7. Ta’lim asosiy vazifasidan tashqari yana qanday vazifalarni bajaradi?",
+            options: [
+                "A) Nazariy, emperik va ilmiy bilim berish vazifalarini",
+                "B) Kuzatish, o‘lchash va tajriba o‘tkazish vazifalarini",
+                "C) Oila, ishlab chiqarish va ma’lumot berish vazifalarini",
+                "D) Tarbiyalash, shakllantirish va baholash vazifalarini"
+            ],
+            correct: "C"
+        },
+        {
+            question: "8. Ta’lim berish qanday pedagogik faoliyat sifatida ta’riflangan?",
+            options: [
+                "A) Ta’lim oluvchining intellektual salohiyatini yuksaltirishga qaratilgan faoliyat",
+                "B) Ta’lim beruvchining ilmiy bilimlarini tekshirishga qaratilgan faoliyat",
+                "C) Tarbiyalanuvchining kundalik bilimlarini nazorat qilishga qaratilgan faoliyat",
+                "D) Narsa-hodisalarning sifat ko‘rsatkichlarini aniqlashga qaratilgan faoliyat"
+            ],
+            correct: "A"
+        },
+        {
+            question: "9. Ta’lim berish jarayoni qanday yo‘l bilan amalga oshiriladi?",
+            options: [
+                "A) Kundalik faoliyat shakllarini takrorlash va nazorat qilish orqali",
+                "B) Kuzatish, o‘lchash va tajriba usullaridan foydalanish orqali",
+                "C) Ilmiy tushunchalarni kundalik bilimlardan ajratish orqali",
+                "D) Aqliy faoliyatni rivojlantirish va jarayon mohiyatini anglash orqali"
+            ],
+            correct: "D"
+        },
+        {
+            question: "10. O‘qitish jarayonidagi ta’lim o‘zida nimani ifoda etadi?",
+            options: [
+                "A) Ta’lim beruvchi tomonidan ishlab chiqilgan faoliyat usullarini",
+                "B) Tarbiyalanuvchilar egallagan bilim, ko‘nikma va malakalarni",
+                "C) Jamiyat tomonidan to‘plangan nazariy bilimlar tizimini",
+                "D) Bilish jarayonida aniqlangan qonun va ko‘rsatkichlarni"
+            ],
+            correct: "B"
+        },
+        {
+            question: "11. Bilimning asosiy mazmuni qaysi javobda to‘g‘ri ifodalangan?",
+            options: [
+                "A) Tabiat va jamiyat hodisalarini kundalik kuzatish natijasi",
+                "B) Insonning atrof-muhitga moslashishiga xizmat qiluvchi tajriba",
+                "C) Ilmiy tushunchalarning yaxlit va tizimlashtirilgan majmui",
+                "D) O‘qitish jarayonida hosil qilingan ko‘nikmalar yig‘indisi"
+            ],
+            correct: "C"
+        },
+        {
+            question: "12. Bilim materialda qanday turlarga ajratilgan?",
+            options: [
+                "A) Kundalik, ilmiy, emperik va nazariy bilimlarga",
+                "B) Nazariy, amaliy, tarixiy va ijtimoiy bilimlarga",
+                "C) Kundalik, obyektiv, tizimli va faol bilimlarga",
+                "D) Ilmiy, hayotiy, mantiqiy va tajribaviy bilimlarga"
+            ],
+            correct: "A"
+        },
+        {
+            question: "13. Kundalik bilimning o‘ziga xos xususiyati qaysi javobda berilgan?",
+            options: [
+                "A) Narsa-hodisalar mohiyatiga chuqur kirib borishga asoslanadi",
+                "B) Sog‘lom fikr va kundalik amaliy faoliyatga asoslanadi",
+                "C) Emperik holatlarni qonunlar orqali tushuntirishga asoslanadi",
+                "D) Kuzatish va o‘lchash natijalarini tizimlashtirishga asoslanadi"
+            ],
+            correct: "B"
+        },
+        {
+            question: "14. Ilmiy bilimning ta’lim-tarbiya jarayonidagi ahamiyati nimada?",
+            options: [
+                "A) Hayotiy harakatlarni oldindan belgilashga xizmat qiladi",
+                "B) Emperik ko‘rsatkichlarning ehtimoliy xususiyatini aniqlaydi",
+                "C) Ta’lim-tarbiyani nazorat qilishga ko‘maklashadi",
+                "D) Muammolar yechimini topib, hodisalar mohiyatiga kirib boradi"
+            ],
+            correct: "D"
+        },
+        {
+            question: "15. Emperik bilim va nazariy bilim o‘rtasidagi farq qaysi javobda to‘g‘ri ko‘rsatilgan?",
+            options: [
+                "A) Emperik bilim tajriba natijasidir, nazariy bilim qonunlarni ochishga qaratiladi",
+                "B) Emperik bilim qonunlarni ochadi, nazariy bilim ko‘rsatkichlarni ifodalaydi",
+                "C) Emperik bilim mohiyatni tushuntiradi, nazariy bilim kuzatishga asoslanadi",
+                "D) Emperik bilim tizimni asoslaydi, nazariy bilim kundalik fikrga tayanadi"
+            ],
+            correct: "A"
+        },
+        // --- 2-QISM: MAKTABGACHA TA’LIM DIDAKTIKASI (20 TA SAVOL) ---
+        {
+            question: "16. Maktabgacha ta’lim didaktikasi sohasining yaratilishiga asosiy sabab nima bo‘lgan?",
+            options: [
+                "A) Maktab ta’limi mazmunini maktabgacha ta’limga ko‘chirish zarurati",
+                "B) Bolalarni har tomonlama rivojlantirishda ta’limning rolini o‘rganish ehtiyoji",
+                "C) Faqat nutqiy mashg‘ulotlarning yangi shakllarini ishlab chiqish talabi",
+                "D) Bolalarning mustaqil mehnat faoliyatini tashkil etish zarurati"
+            ],
+            correct: "B"
+        },
+        {
+            question: "17. Maktabgacha ta’lim didaktikasi umumiy didaktikaga qanday munosabatda bo‘ladi?",
+            options: [
+                "A) Umumiy didaktikaning alohida sohasi hisoblanadi",
+                "B) Umumiy didaktikaning amaliy metodi hisoblanadi",
+                "C) Umumiy didaktikaning tarixiy bosqichi hisoblanadi",
+                "D) Umumiy didaktikaning nazorat vositasi hisoblanadi"
+            ],
+            correct: "A"
+        },
+        {
+            question: "18. Maktabgacha ta’lim didaktikasining asosiy vazifasi qaysi javobda to‘liqroq ifodalangan?",
+            options: [
+                "A) Bolalarning o‘yin va mehnat faoliyatini alohida tashkil etish",
+                "B) Maktabdagi fanlarni soddalashtirib bolalarga o‘rgatish",
+                "C) Ta’lim mazmuni, metodlari va tashkiliy shakllarini ishlab chiqish",
+                "D) Bolalarning faqat aqliy va nutqiy rivojlanishini ta’minlash"
+            ],
+            correct: "C"
+        },
+        {
+            question: "19. Manbaga ko‘ra, maktabgacha ta’lim didaktikasining asoschilari kimlar?",
+            options: [
+                "A) L.S.Vigodskiy va E.I.Tixeeva",
+                "B) Y.A.Komenskiy va K.D.Ushinskiy",
+                "C) K.D.Ushinskiy va E.I.Tixeeva",
+                "D) Y.A.Komenskiy va L.S.Vigodskiy"
+            ],
+            correct: "B"
+        },
+        {
+            question: "20. Y.A.Komenskiy “Onalar maktabi” asarida maktabgacha ta’lim maqsadini qanday belgilagan?",
+            options: [
+                "A) Tabiatni kuzatish va mehnat faoliyatini rivojlantirish",
+                "B) Nutqni rivojlantirish va ko‘rgazmali mashqlarni tashkil etish",
+                "C) Oddiy bilimlarni o‘zlashtirish, axloqiy odatlarni rivojlantirish va maktabga tayyorlash",
+                "D) Muntazam bilim berish, o‘yinlarni boshqarish va tasviriy faoliyatni rivojlantirish"
+            ],
+            correct: "C"
+        },
+        {
+            question: "21. “Tarbiya va ta’limning boshlanishi maktabgacha yoshdadir” degan g‘oyani kim ilgari surgan?",
+            options: [
+                "A) E.I.Tixeeva",
+                "B) L.S.Vigodskiy",
+                "C) K.D.Ushinskiy",
+                "D) Y.A.Komenskiy"
+            ],
+            correct: "D"
+        },
+        {
+            question: "22. K.D.Ushinskiy maktabgacha ta’limning vazifasini nimadan iborat deb hisoblagan?",
+            options: [
+                "A) Aqliy salohiyat va nutq qobiliyatini rivojlantirib, maktabga tayyorlash",
+                "B) Axloqiy odatlarni shakllantirib, bolalarni mehnatga tayyorlash",
+                "C) Atrof-muhit haqidagi tasavvurlarni kengaytirib, o‘yinga o‘rgatish",
+                "D) Bilimlar tizimini shakllantirib, bolalarni jamiyatga tayyorlash"
+            ],
+            correct: "A"
+        },
+        {
+            question: "23. K.D.Ushinskiy ta’lim jarayonida nimalarga tayanish zarurligini uqtirgan?",
+            options: [
+                "A) Muntazamlilik va bolalarning mustaqil mehnatiga",
+                "B) Ko‘rgazmalilik va mashg‘ulotlarning qiziqarliligiga",
+                "C) Nazariy bilim va o‘qituvchining tushuntirishiga",
+                "D) O‘yin faoliyati va bilimlarning dasturiyligiga"
+            ],
+            correct: "B"
+        },
+        {
+            question: "24. O‘tmish pedagoglari bolalarning bilim olish huquqini qanday mazmunda tushuntirganlar?",
+            options: [
+                "A) Faqat maktab dasturini oldindan o‘zlashtirish huquqi sifatida",
+                "B) Hayotni anglash, dunyoqarashni kengaytirish va malaka hosil qilish huquqi sifatida",
+                "C) Mustaqil o‘yin va tasviriy faoliyatni tanlash huquqi sifatida",
+                "D) Tabiat va jamiyat hodisalarini kuzatish huquqi sifatida"
+            ],
+            correct: "B"
+        },
+        {
+            question: "25. O‘tmish pedagoglari bilimlarning qaysi jarayonlardagi muhim rolini ko‘rsatib berganlar?",
+            options: [
+                "A) Aqliy rivojlanish, nutq, o‘yin, tasviriy faoliyat va munosabat shakllanishida",
+                "B) Jismoniy rivojlanish, mehnat, musiqa va intizom shakllanishida",
+                "C) Maktabga moslashish, yozish, hisoblash va o‘qish jarayonida",
+                "D) Axloqiy tarbiya, gigiyena, sport va ijodkorlik rivojida"
+            ],
+            correct: "A"
+        },
+        {
+            question: "26. Maktabgacha ta’lim muassasalari dasturiga qanday bilimlarni kiritish zarur deb topilgan?",
+            options: [
+                "A) Tabiat, jamiyat, kishilar mehnati, buyumlar va materiallar haqidagi bilimlar",
+                "B) O‘qish, yozish, hisoblash, tabiat va jamiyat haqidagi bilimlar",
+                "C) Nutq, o‘yin, tasviriy faoliyat va axloq haqidagi bilimlar",
+                "D) Maktab, oila, bolalar mehnati va san’at haqidagi bilimlar"
+            ],
+            correct: "A"
+        },
+        {
+            question: "27. Bilimlar dasturini barcha bolalar o‘zlashtirishi uchun nima qilish zarur deb ko‘rsatilgan?",
+            options: [
+                "A) Maktab dasturini soddalashtirib, mashg‘ulotlarda takrorlash",
+                "B) Bolalar imkoniyatlari va o‘qitish metodlarini o‘rganish",
+                "C) Tarbiyachining tushuntirish faoliyatini kuchaytirish",
+                "D) Ko‘rgazmali qurollardan har bir mashg‘ulotda foydalanish"
+            ],
+            correct: "B"
+        },
+        {
+            question: "28. O‘yin va mashg‘ulotlardan foydalanish bo‘yicha qanday talab ilgari surilgan?",
+            options: [
+                "A) Ularni alohida va mustaqil faoliyat sifatida qo‘llash",
+                "B) Ularni bolalarning yoshiga qarab navbat bilan qo‘llash",
+                "C) Ularni bir-biri bilan aloqadorlikda qo‘llash",
+                "D) Ularni faqat ko‘rgazmali ta’limda qo‘llash"
+            ],
+            correct: "C"
+        },
+        {
+            question: "29. E.I.Tixeeva qaysi nazariyani ilmiy jihatdan asoslab bergan?",
+            options: [
+                "A) Bolalarning aqliy salohiyatini rivojlantirish nazariyasini",
+                "B) Maktabgacha ta’limning dasturiyligi nazariyasini",
+                "C) Maktabgacha yoshdagi bolalar nutqini o‘stirish nazariyasini",
+                "D) Bolalarni maktab ta’limiga tayyorlash nazariyasini"
+            ],
+            correct: "C"
+        },
+        {
+            question: "30. E.I.Tixeeva bilimlar mazmunini belgilashda qaysi omilni hisobga olgan?",
+            options: [
+                "A) Bolalarning o‘yin faoliyatidagi qiziqishlarini",
+                "B) Kichik va katta maktabgacha yosh xususiyatlarini",
+                "C) Maktabgacha ta’lim dasturining talablarini",
+                "D) Tarbiyachining mashg‘ulot olib borish uslubini"
+            ],
+            correct: "B"
+        },
+        {
+            question: "31. E.I.Tixeeva atrof-muhit haqidagi bilimlarning qaysi jihatdagi o‘rnini ko‘rsatgan?",
+            options: [
+                "A) Bolalarning jismoniy faolligini oshirishdagi o‘rnini",
+                "B) Bolalar lug‘ati boyligini o‘stirishdagi o‘rnini",
+                "C) Bolalarning axloqiy odatlarini shakllantirishdagi o‘rnini",
+                "D) Bolalarni maktab tartibiga moslashtirishdagi o‘rnini"
+            ],
+            correct: "B"
+        },
+        {
+            question: "32. E.I.Tixeeva ta’lim jarayoniga oid qaysi fikrni isbotlagan?",
+            options: [
+                "A) Ta’lim maktab dasturiga mos ravishda tuzilishi kerakligini",
+                "B) Ta’lim kozgazmali bo‘lib, bolalar faoliyati va o‘yin bilan bog‘lanishi kerakligini",
+                "C) Ta’lim faqat tarbiyachining bilim berish faoliyatidan iboratligini",
+                "D) Ta’limning asosini bolalarning mustaqil tasviriy faoliyati tashkil etishini"
+            ],
+            correct: "B"
+        },
+        {
+            question: "33. E.I.Tixeeva o‘qitishni qanday faoliyat sifatida ifodalagan?",
+            options: [
+                "A) Bolalarning mustaqil ravishda yangi bilimlarni izlab topish faoliyati",
+                "B) Tarbiyachining o‘yinlarni tashkil etishi va bolalarning ishtiroki",
+                "C) Tarbiyachining bilim va nutq ko‘nikmalarini berishi hamda bolalarning o‘zlashtirishi",
+                "D) Bolalarning atrof-muhitni kuzatishi va tasavvurlarini ifodalashi"
+            ],
+            correct: "C"
+        },
+        {
+            question: "34. L.S.Vigodskiy maktabgacha ta’limga oid qaysi masalani ko‘tarib chiqqan?",
+            options: [
+                "A) Ta’limning ko‘rgazmaliligi haqidagi masalani",
+                "B) Bolalar nutqini o‘stirish haqidagi masalani",
+                "C) Maktabgacha ta’limning dasturiyligi haqidagi masalani",
+                "D) O‘yin va mashg‘ulot aloqadorligi haqidagi masalani"
+            ],
+            correct: "C"
+        },
+        {
+            question: "35. L.S.Vigodskiy maktabgacha ta’lim dasturi haqida qanday fikr bildirgan?",
+            options: [
+                "A) Maktab dasturi mazmuni to‘liq saqlanishi kerakligini",
+                "B) Maktab ta’limi mazmunini soddalashtirib ko‘chirish kerakligini",
+                "C) Maktabgacha dastur maktab dasturidan farq qilishi kerakligini",
+                "D) Maktabgacha yoshda alohida dastur talab qilinmasligini"
+            ],
+            correct: "C"
+        }
+    ];
+
+    let currentIdx = 0;
+    
+    // Test holatini boshqarish massivlari
+    let userAnswers = Array(testData.length).fill(null); 
+    let isApplied = Array(testData.length).fill(false);
+
+    const progressText = document.getElementById('progress-text');
+    const questionEl = document.getElementById('question');
+    const optionsContainer = document.getElementById('options-container');
+    const prevBtn = document.getElementById('prev-btn');
+    const actionBtn = document.getElementById('action-btn');
+
+    function loadQuestion() {
+        const q = testData[currentIdx];
+        
+        progressText.innerText = `Savol: ${currentIdx + 1} / ${testData.length}`;
+        questionEl.innerText = q.question;
+        optionsContainer.innerHTML = '';
+
+        // "Oldingi savol" tugmasini birinchi savolda o'chirish
+        prevBtn.disabled = currentIdx === 0;
+
+        // Markaziy harakat tugmasi holatini boshqarish
+        if (isApplied[currentIdx]) {
+            actionBtn.innerText = "Keyingi savol";
+            actionBtn.disabled = false;
+        } else {
+            actionBtn.innerText = "Tasdiqlash";
+            actionBtn.disabled = userAnswers[currentIdx] === null;
+        }
+
+        q.options.forEach(option => {
+            const div = document.createElement('div');
+            div.className = 'option-card';
+            div.innerText = option;
+            const letter = option.charAt(0);
+
+            // Agar javob avval tasdiqlangan bo'lsa, ranglarini qayta tiklash (70% shaffoflik)
+            if (isApplied[currentIdx]) {
+                div.classList.add('locked');
+                if (letter === q.correct) {
+                    div.classList.add('correct');
+                }
+                if (userAnswers[currentIdx] === letter && letter !== q.correct) {
+                    div.classList.add('wrong');
+                }
+            } 
+            // Agar faqat belgilangan bo'lsa (lekin tasdiqlanmagan)
+            else if (userAnswers[currentIdx] === letter) {
+                div.classList.add('selected');
+            }
+
+            // Variantni tanlash (Faqatgina tasdiqlanmagan bo'lsagina ishlaydi)
+            div.addEventListener('click', () => {
+                if (isApplied[currentIdx]) return;
+
+                document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+                div.classList.add('selected');
+                userAnswers[currentIdx] = letter;
+                actionBtn.disabled = false; // "Tasdiqlash" tugmasini aktivlashtirish
+            });
+
+            optionsContainer.appendChild(div);
+        });
+    }
+
+    // "Tasdiqlash" yoki "Keyingi savol" tugmasi bosilganda
+    actionBtn.addEventListener('click', () => {
+        if (!isApplied[currentIdx]) {
+            // 1. Tasdiqlash harakati
+            isApplied[currentIdx] = true;
+            const q = testData[currentIdx];
+            const selectedLetter = userAnswers[currentIdx];
+
+            document.querySelectorAll('.option-card').forEach(card => {
+                card.classList.add('locked');
+                const letter = card.innerText.charAt(0);
+                
+                if (letter === q.correct) {
+                    card.classList.add('correct');
+                }
+                if (letter === selectedLetter && selectedLetter !== q.correct) {
+                    card.classList.add('wrong');
+                }
+            });
+
+            actionBtn.innerText = "Keyingi savol";
+        } else {
+            // 2. Keyingi savolga o'tish
+            currentIdx++;
+            if (currentIdx < testData.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+    });
+
+    // "Oldingi savol" tugmasi bosilganda
+    prevBtn.addEventListener('click', () => {
+        if (currentIdx > 0) {
+            currentIdx--;
+            loadQuestion();
+        }
+    });
+
+    // Yakuniy natijani hisoblash va ko'rsatish
+    function showResults() {
+        let correctCount = 0;
+        testData.forEach((q, index) => {
+            if (userAnswers[index] === q.correct) {
+                correctCount++;
+            }
+        });
+
+        document.getElementById('test-pane').innerHTML = `
+            <div style="text-align: center; margin: auto; padding: 1rem;">
+                <h2 style="font-size: 2.5rem; color: #0f172a; margin-bottom: 0.5rem;">Test Yakunlandi! 🎉</h2>
+                <p style="color: #64748b; font-size: 1.2rem; margin-bottom: 2rem;">Barcha savollar bo‘yicha umumiy natijangiz:</p>
+                <div style="font-size: 1.8rem; font-weight: bold; color: var(--accent-blue); background: #eff6ff; padding: 1.5rem; border-radius: 12px; border: 2px dashed #bfdbfe;">
+                    To‘g‘ri javoblar: ${correctCount} / ${testData.length}
+                </div>
+                <button onclick="location.reload()" class="btn btn-primary" style="margin-top: 2rem; align-self: center;">Qayta topshirish</button>
+            </div>`;
+    }
+
+    // Platformani dastlabki yuklash
+    loadQuestion();
+</script>
+</body>
+</html>
